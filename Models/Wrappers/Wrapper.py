@@ -3,7 +3,7 @@ from collections import namedtuple
 
 import torch
 from torch import nn
-from torch_geometric.nn.dense.linear import Linear
+from torch.nn import functional as F
 from typing import Tuple
 
 from utils import time_handlers
@@ -36,12 +36,12 @@ class Wrapper(nn.Module):
         self.model = torch.load(f'{self.path}/{self.model_name}_{self.model_type}.pth')
         
     @time_handlers.timer
-    def save_parameters(self, prefix = ''):
+    def save_parameters(self):
         
         torch.save(self.model, f'{self.path}/{self.model_name}_{self.model_type}.pth')
 
     def forward(self, x):
         pass
 
-    def loss(self):
-        pass
+    def loss(self, pred, label):
+        return F.mse_loss(pred, label)
