@@ -1,0 +1,6 @@
+wrapper_name: CNNWrapper
+model_name: 
+model_type: cnn
+model_params:
+    in_channels: 10
+    out_channels: 10
