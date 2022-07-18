@@ -277,6 +277,7 @@ class Tetris:
         self.current_pos = [x, 0]
         self.current_rotation = rotation
 
+        ## todo: 现在是rotate and drop策略，过于简单，无法引入障碍物，需要进行调整
         # Drop piece
         while not self._check_collision(self._get_rotated_piece(), self.current_pos):
             if render:
