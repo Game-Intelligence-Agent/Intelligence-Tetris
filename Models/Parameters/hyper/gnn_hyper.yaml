@@ -1,4 +1,5 @@
 wrapper_name: GNNWrapper
+agent_name: Agent_for_gnn
 train_params:
     device: cuda:0
     epoch: 5 ## epoch for trainings
