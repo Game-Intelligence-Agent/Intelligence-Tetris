@@ -30,7 +30,7 @@ def build_optimizer(training_args, params):
         optimizer = optim.RAdam(filter_fn, lr=args.lr, weight_decay=weight_decay)
 
 
-    if args.lookahead:
+    if 'lookahead' in args and args.lookahead:
         optimizer = Lookahead(optimizer)
 
     if args.opt_scheduler == 'none':
@@ -41,4 +41,5 @@ def build_optimizer(training_args, params):
         scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.milestones, gamma=args.gamma)
     elif args.opt_scheduler == 'cos':
         scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.opt_restart)
+
     return scheduler, optimizer

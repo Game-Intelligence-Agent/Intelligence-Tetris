@@ -3,7 +3,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 class tb_handler:
 
-    def __init__(self, path: str, name: str, model, model_name: str) -> None:
+    def __init__(self, path: str, name: str, model) -> None:
 
         if path[-1] != '/':
             path += '/'
@@ -13,7 +13,6 @@ class tb_handler:
         
         self.writer = SummaryWriter(f'{path}{name}')
         self.model = model
-        self.model_name = model_name
 
     def add_image(self, image, name):
 
