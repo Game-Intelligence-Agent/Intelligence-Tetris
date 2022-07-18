@@ -1,6 +1,26 @@
 wrapper_name: CNNWrapper
-model_name: 
-model_type: cnn
+agent_name: Agent
+train_params:
+    device: cuda:0
+    epoch: 5 ## epoch for trainings
+    episodes: 2000 ## times to play
+    train_every: 1 ## training interval
+    batch_size: 512
+    max_steps:  ## step to play, None means play until the game over
+    render_every: 50
+    render_delay:
+    log_every: 10
+optimizer_params:
+    opt: radam
+    lr: 0.01
+    weight_decay: 0.0001
+    lookahead: True
+    opt_scheduler: multistep
+    milestones: [5, 10, 15, 20]
+    gamma: 0.2
 model_params:
     in_channels: 10
     out_channels: 10
+    model_name: gatv2
+    model_type: gnn
+    parameters_path: ./Models/Parameters/

@@ -1,4 +1,4 @@
-from Agents import Agent
+from Agents import *
 from Games import Tetris
 from Models.Parameters import hyper_loader
 from Models.Wrappers import *
@@ -32,11 +32,11 @@ def main():
     env = Tetris()
 
     ## model
-    model = eval(args.train_hyper['wrapper_name'])(**args.train_hyper['model_params'])
+    model = eval(args.train_hyper['wrapper_name'])(**args.train_hyper['model_params']).to(args.train_hyper['train_params']['device'])
     tb = tb_handler('./Models/runs/', args.train_hyper['wrapper_name'], model)
 
     ## agent
-    agent = Agent(state_size = env.get_state_size(), tb_handler = tb, **args['agent_hyper'])
+    agent = eval(args.train_hyper['agent_name'])(state_size = env.get_state_size(), tb_handler = tb, **args['agent_hyper'])
 
     scores = []
 
@@ -72,13 +72,16 @@ def main():
 
         # Train
         if episode % args.train_hyper['train_params']['train_every'] == 0:
-            agent.train(batch_size = args.train_hyper['train_params']['batch_size'], epochs = args.train_hyper['train_params']['epochs'])
+            agent.train(batch_size = args.train_hyper['train_params']['batch_size'], epochs = args.train_hyper['train_params']['epochs'], device = args.train_hyper['train_params']['device'], times = int(episode / args.train_hyper['train_params']['train_every']), train_hyper = args.train_hyper)
 
         if log_every and episode and episode % log_every == 0:
             avg_score = mean(scores[-log_every:])
             min_score = min(scores[-log_every:])
             max_score = max(scores[-log_every:])
 
+            tb.add_scalar(avg_score, episode / log_every, f'Avg Score every {log_every} Episode')
+            tb.add_scalar(max_score, episode / log_every, f'Max Score every {log_every} Episode')
+            tb.add_scalar(min_score, episode / log_every, f'Min Score every {log_every} Episode')
 
             print(f'Episode {episode}----------------------------------------------\n[Scores For Last {log_every} Games] Avg Score: {avg_score}, Max Score: {max_score}, Min Score: {min_score}')
 

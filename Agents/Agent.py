@@ -6,7 +6,6 @@ from collections import deque
 
 from Models.utils import build_optimizer
 
-
 # Deep Q Learning Agent + Maximin
 #
 # This version only provides only value per input,
@@ -15,7 +14,7 @@ from Models.utils import build_optimizer
 # best final state for the combinations of possible states,
 # in constrast to the traditional way of finding the best
 # action for a particular state.
-class DQNAgent:
+class Agent:
 
     '''Deep Q Learning Agent + Maximin
 
@@ -82,21 +81,24 @@ class DQNAgent:
             return random.choice(list(states))
 
         else:
-            for state in states:
-                with torch.no_grad():
+            with torch.no_grad():
+                for state in states:
                     value = self.predict_value(torch.from_numpy(np.reshape(state, [1, self.state_size])))
-                if not max_value or value > max_value:
-                    max_value = value
-                    best_state = state
+                    if not max_value or value > max_value:
+                        max_value = value
+                        best_state = state
 
         return best_state
 
 
-    def train(self, batch_size = 32, epochs = 3, optimizer_params = {}):
+    def train(self, batch_size = 32, epochs = 3, device = 'cuda:0', times = 0, optimizer_params = {}):
+
         '''Trains the agent'''
         n = len(self.memory)
     
         if n >= self.replay_start_size and n >= batch_size:
+
+            scheduler, optimizer = build_optimizer(optimizer_params, self.tb.model.parameters())
 
             for epoch in range(epochs):
 
@@ -104,7 +106,8 @@ class DQNAgent:
 
                 # Get the expected score for the next states, in batch (better performance)
                 next_states = np.array([x[1] for x in batch])
-                next_qs = [x[0] for x in self.model.predict(next_states)]
+                with torch.no_grad():
+                    next_qs = [x[0] for x in self.model.predict(next_states)]
 
                 x = []
                 y = []
@@ -120,13 +123,23 @@ class DQNAgent:
                     x.append(state)
                     y.append(new_q)
 
+                x = torch.Tensor(x).to(device)
+                y = torch.Tensor(y).to(device).reshape(-1, 1)
+
                 # Fit the model to the given values
                 self.tb_handler.model.train()
-                preds = self.tb_handler.model(torch.Tensor(x)).reshape(-1, 1)
-                y = torch.Tensor(y).reshape(-1, 1)
+                optimizer.zero_grad()
+                self.tb_handler.add_graph(x)
+                preds = self.tb_handler.model(x).reshape(-1, 1)
 
-                self.tb_handler.model.loss(preds, y)
+                loss = self.tb_handler.model.loss(preds, y)
+                loss.backward()
+                optimizer.step()
+                if scheduler is not None:
+                    scheduler.step()
 
+                self.tb_handler.show_params(times * epochs + epoch)
+                self.tb_handler.add_scalar(self, loss.item(), times * epochs + epoch, 'loss')
 
             # Update the exploration variable
             if self.epsilon > self.epsilon_min:
