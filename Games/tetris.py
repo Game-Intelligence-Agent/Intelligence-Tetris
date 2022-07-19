@@ -262,7 +262,8 @@ class Tetris:
                 # Valid move
                 if pos[1] >= 0:
                     board = self._add_piece_to_board(piece, pos)
-                    states[(x, rotation)] = self._get_board_props(board)
+                    _, board = self._clear_lines(board)
+                    states[(x, rotation)] = board
 
         return states
 
