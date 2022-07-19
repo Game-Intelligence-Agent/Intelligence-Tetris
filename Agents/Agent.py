@@ -32,7 +32,7 @@ class Agent:
         replay_start_size: Minimum size needed to train
     '''
 
-    def __init__(self, state_size, tb_handler, mem_size=10000, discount=0.95,
+    def __init__(self, state_size, tb_handler, device, mem_size=10000, discount=0.95,
                  epsilon=1, epsilon_min=0, epsilon_stop_episode=500, replay_start_size=None):
 
 
@@ -43,14 +43,15 @@ class Agent:
         self.epsilon_min = epsilon_min
         self.epsilon_decay = (self.epsilon - self.epsilon_min) / (epsilon_stop_episode)
         self.tb_handler = tb_handler
+        self.device = device if torch.cuda.is_available() else 'cpu'
         if not replay_start_size:
             replay_start_size = mem_size / 2
         self.replay_start_size = replay_start_size
-        self.model = self._build_model()
+
 
     def add_to_memory(self, current_state, next_state, reward, done):
         '''Adds a play to the replay memory buffer'''
-        self.memory.append((current_state, next_state, reward, done))
+        self.memory.append((self.transform(current_state), self.transform(next_state), reward, done))
 
 
     def random_value(self):
@@ -60,7 +61,13 @@ class Agent:
 
     def predict_value(self, state):
         '''Predicts the score for a certain state'''
+
         return self.tb_handler.model(state)
+
+
+    def transform(self, state):
+        '''Transform state to special form'''
+        return torch.Tensor(state)
 
 
     def act(self, state):
@@ -72,26 +79,29 @@ class Agent:
             return self.predict_value(state)
 
 
-    def best_state(self, states):
+    def best_state(self, states: dict):
         '''Returns the best state for a given collection of states'''
         max_value = None
         best_state = None
+        best_action = None
 
         if random.random() <= self.epsilon:
-            return random.choice(list(states))
+            best_action = random.choice(list(states.keys()))
+            best_state = states[best_action]
 
         else:
             with torch.no_grad():
-                for state in states:
-                    value = self.predict_value(torch.from_numpy(np.reshape(state, [1, self.state_size])))
+                for action, state in states.items():
+                    value = self.predict_value(self.transform(state).to(self.device))
                     if not max_value or value > max_value:
                         max_value = value
                         best_state = state
+                        best_action = action
 
-        return best_state
+        return best_action, best_state
 
 
-    def train(self, batch_size = 32, epochs = 3, device = 'cuda:0', times = 0, optimizer_params = {}):
+    def train(self, batch_size = 32, epochs = 3, times = 0, optimizer_params = {}):
 
         '''Trains the agent'''
         n = len(self.memory)
@@ -106,25 +116,28 @@ class Agent:
 
                 # Get the expected score for the next states, in batch (better performance)
                 next_states = np.array([x[1] for x in batch])
-                with torch.no_grad():
-                    next_qs = [x[0] for x in self.model.predict(next_states)]
+                # self.tb_handler.model.eval()
+                # with torch.no_grad():
+                #     next_qs = [x[0] for x in self.predict_value(self.transform(next_states).to(self.device))]
 
                 x = []
                 y = []
 
                 # Build xy structure to fit the model in batch (better performance)
-                for i, (state, _, reward, done) in enumerate(batch):
-                    if not done:
-                        # Partial Q formula
-                        new_q = reward + self.discount * next_qs[i]
-                    else:
-                        new_q = reward
+                self.tb_handler.model.eval()
+                with torch.no_grad():
+                    for i, (state, next_state, reward, done) in enumerate(batch):
+                        if not done:
+                            # Partial Q formula
+                            new_q = reward + self.discount * self.predict_value(self.transform(next_state).to(self.device))
+                        else:
+                            new_q = reward
 
-                    x.append(state)
-                    y.append(new_q)
+                        x.append(state)
+                        y.append(new_q)
 
-                x = torch.Tensor(x).to(device)
-                y = torch.Tensor(y).to(device).reshape(-1, 1)
+                x = self.transform(x).to(self.device)
+                y = self.transform(y).to(self.device).reshape(-1, 1)
 
                 # Fit the model to the given values
                 self.tb_handler.model.train()
