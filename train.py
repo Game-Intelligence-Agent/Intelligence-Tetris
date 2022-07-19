@@ -36,7 +36,7 @@ def main():
     tb = tb_handler('./Models/runs/', args.train_hyper['wrapper_name'], model)
 
     ## agent
-    agent = eval(args.train_hyper['agent_name'])(state_size = env.get_state_size(), tb_handler = tb, **args['agent_hyper'])
+    agent = eval(args.train_hyper['agent_name'])(state_size = env.get_state_size(), tb_handler = tb, device = args.train_hyper['train_params']['device'], **args['agent_hyper'])
 
     scores = []
 
@@ -54,25 +54,19 @@ def main():
         # Game
         while not done and (not args.train_hyper['train_params']['max_steps'] or steps < args.train_hyper['train_params']['max_steps']):
             next_states = env.get_next_states()
-            best_state = agent.best_state(next_states.values())
-            
-            best_action = None
-            for action, state in next_states.items():
-                if state == best_state:
-                    best_action = action
-                    break
+            best_action = agent.best_state(next_states)
 
             reward, done = env.play(best_action[0], best_action[1], render = render, render_delay = args.train_hyper['train_params']['render_delay'])
             
-            agent.add_to_memory(current_state, next_states[best_action], reward, done)
-            current_state = next_states[best_action]
+            agent.add_to_memory(current_state, next_states, reward, done)
+            current_state = next_states
             steps += 1
 
         scores.append(env.get_game_score())
 
         # Train
         if episode % args.train_hyper['train_params']['train_every'] == 0:
-            agent.train(batch_size = args.train_hyper['train_params']['batch_size'], epochs = args.train_hyper['train_params']['epochs'], device = args.train_hyper['train_params']['device'], times = int(episode / args.train_hyper['train_params']['train_every']), train_hyper = args.train_hyper)
+            agent.train(batch_size = args.train_hyper['train_params']['batch_size'], epochs = args.train_hyper['train_params']['epochs'], times = int(episode / args.train_hyper['train_params']['train_every']), train_hyper = args.train_hyper)
 
         if log_every and episode and episode % log_every == 0:
             avg_score = mean(scores[-log_every:])
