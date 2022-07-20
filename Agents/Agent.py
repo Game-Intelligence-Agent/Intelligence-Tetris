@@ -129,7 +129,7 @@ class Agent:
                     for i, (state, next_state, reward, done) in enumerate(batch):
                         if not done:
                             # Partial Q formula
-                            new_q = reward + self.discount * self.predict_value(self.transform(next_state).to(self.device))
+                            new_q = reward + self.discount * self.predict_value(next_state.to(self.device))
                         else:
                             new_q = reward
 
