@@ -6,7 +6,7 @@ from torch import nn
 from torch.nn import functional as F
 from typing import Tuple
 
-from utils import time_handlers
+from Models.utils import time_handlers
 
 class Wrapper(nn.Module):
 
@@ -27,13 +27,11 @@ class Wrapper(nn.Module):
         self.path = parameters_path
         self.model = None
 
-    def build_model(self):
-        pass
-
     @time_handlers.timer
     def load_parameters(self):
         
-        self.model = torch.load(f'{self.path}/{self.model_name}_{self.model_type}.pth')
+        if os.path.exists(f'{self.path}/{self.model_name}_{self.model_type}.pth'):
+            self.model = torch.load(f'{self.path}/{self.model_name}_{self.model_type}.pth')
         
     @time_handlers.timer
     def save_parameters(self):
@@ -41,6 +39,9 @@ class Wrapper(nn.Module):
         torch.save(self.model, f'{self.path}/{self.model_name}_{self.model_type}.pth')
 
     def forward(self, x):
+        pass
+
+    def reset_parameters(self):
         pass
 
     def loss(self, pred, label):
