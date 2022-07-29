@@ -51,7 +51,7 @@ class Agent:
 
     def add_to_memory(self, current_state, next_state, reward, done):
         '''Adds a play to the replay memory buffer'''
-        self.memory.append((self.transform(current_state), self.transform(next_state), reward, done))
+        self.memory.append((current_state, next_state, reward, done))
 
 
     def random_value(self):
@@ -129,15 +129,15 @@ class Agent:
                     for i, (state, next_state, reward, done) in enumerate(batch):
                         if not done:
                             # Partial Q formula
-                            new_q = reward + self.discount * self.predict_value(next_state.to(self.device))
+                            new_q = reward + self.discount * self.predict_value(self.transform(next_state).to(self.device))
                         else:
                             new_q = reward
 
-                        x.append(state)
+                        x.append(self.transform(state))
                         y.append(new_q)
 
-                x = self.transform(x).to(self.device)
-                y = self.transform(y).to(self.device).reshape(-1, 1)
+                x = torch.Tensor(x).to(self.device)
+                y = torch.Tensor(y).to(self.device).reshape(-1, 1)
 
                 # Fit the model to the given values
                 self.tb_handler.model.train()
