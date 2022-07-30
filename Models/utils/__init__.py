@@ -17,7 +17,7 @@ def build_optimizer(training_args, params):
     filter_fn = filter(lambda p : p.requires_grad, params)
 
     if args.opt == 'adam':
-        optimizer = optim.Adam(filter_fn, lr=args.lr, weight_decay=weight_decay)
+        optimizer = optim.Adam(filter_fn, lr=args.lr, weight_decay=weight_decay, amsgrad = args.amsgrad)
     elif args.opt == 'sgd':
         optimizer = optim.SGD(filter_fn, lr=args.lr, momentum=0.95, weight_decay=weight_decay)
     elif args.opt == 'rmsprop':
@@ -30,7 +30,7 @@ def build_optimizer(training_args, params):
         optimizer = optim.RAdam(filter_fn, lr=args.lr, weight_decay=weight_decay)
 
 
-    if 'lookahead' in args and args.lookahead:
+    if args.lookahead:
         optimizer = Lookahead(optimizer)
 
     if args.opt_scheduler == 'none':
@@ -41,5 +41,7 @@ def build_optimizer(training_args, params):
         scheduler = optim.lr_scheduler.MultiStepLR(optimizer, milestones=args.milestones, gamma=args.gamma)
     elif args.opt_scheduler == 'cos':
         scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.opt_restart)
+    elif args.opt_scheduler == 'rlop':
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode = args.mode, factor = args.gamma, patience = args.patience, verbose = 1, threshold = args.threshold, threshold_mode = args.threshold_mode, cooldown = args.cooldown, min_lr = args.min_lr)
 
     return scheduler, optimizer

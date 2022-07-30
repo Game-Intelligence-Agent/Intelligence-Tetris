@@ -81,7 +81,7 @@ class Tetris:
         self.next_piece = self.bag.pop()
         self._new_round()
         self.score = 0
-        return self._get_board_props(self.board)
+        return self.board
 
 
     def _get_rotated_piece(self):
@@ -235,7 +235,7 @@ class Tetris:
     def get_next_states(self):
         '''Get all possible next states'''
         states = {}
-        piece_id = self.current_piece
+        piece_id = self.current_piece ## 获取当前方块
         
         if piece_id == 6: 
             rotations = [0]
@@ -245,6 +245,7 @@ class Tetris:
             rotations = [0, 90, 180, 270]
 
         # For all rotations
+        ## 穷举所有可行的可能状态
         for rotation in rotations:
             piece = Tetris.TETROMINOS[piece_id][rotation]
             min_x = min([p[0] for p in piece])
@@ -270,7 +271,7 @@ class Tetris:
 
     def get_state_size(self):
         '''Size of the state'''
-        return 4
+        return (20, 10)
 
 
     def play(self, x, rotation, render=False, render_delay=None):

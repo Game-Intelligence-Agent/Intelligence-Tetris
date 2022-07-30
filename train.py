@@ -13,7 +13,7 @@ from statistics import mean, median
 def get_args():
     import argparse
     parser = argparse.ArgumentParser("""Parameters for Tetris Agent""")
-    parser.add_argument("--hyper_name", type = str, default = 'cnn_hyper', help = 'file name for hyper parameters')
+    parser.add_argument("--hyper_name", type = str, default = 'gnn_hyper', help = 'file name for hyper parameters')
     args = parser.parse_args()
 
     args.agent_hyper = hyper_loader('agent_hyper')
@@ -35,12 +35,14 @@ def main():
     model = eval(args.train_hyper['wrapper_name'])(**args.train_hyper['model_params']).to(args.train_hyper['train_params']['device'])
     tb = tb_handler('./Models/runs/', args.train_hyper['wrapper_name'], model)
 
-    ## agent
-    agent = eval(args.train_hyper['agent_name'])(state_size = env.get_state_size(), tb_handler = tb, device = args.train_hyper['train_params']['device'], **args['agent_hyper'])
+    # print(tb.model.state_dict())
+
+    ## agentprint
+    agent = Agent(tb_handler = tb, device = args.train_hyper['train_params']['device'], **args.agent_hyper)
 
     scores = []
 
-    for episode in tqdm(range(args.train_hyper['train_params']['episodes'])):
+    for episode in range(args.train_hyper['train_params']['episodes']):
 
         current_state = env.reset()
         done = False
@@ -54,19 +56,19 @@ def main():
         # Game
         while not done and (not args.train_hyper['train_params']['max_steps'] or steps < args.train_hyper['train_params']['max_steps']):
             next_states = env.get_next_states()
-            best_action = agent.best_state(next_states)
+            best_action, best_state = agent.best_state(next_states)
 
             reward, done = env.play(best_action[0], best_action[1], render = render, render_delay = args.train_hyper['train_params']['render_delay'])
             
-            agent.add_to_memory(current_state, next_states, reward, done)
-            current_state = next_states
+            agent.add_to_memory(current_state, best_state, reward, done)
+            current_state = best_state
             steps += 1
 
         scores.append(env.get_game_score())
 
         # Train
         if episode % args.train_hyper['train_params']['train_every'] == 0:
-            agent.train(batch_size = args.train_hyper['train_params']['batch_size'], epochs = args.train_hyper['train_params']['epochs'], times = int(episode / args.train_hyper['train_params']['train_every']), train_hyper = args.train_hyper)
+            agent.train(batch_size = args.train_hyper['train_params']['batch_size'], epochs = args.train_hyper['train_params']['epochs'], times = int(episode / args.train_hyper['train_params']['train_every']), optimizer_params = args.train_hyper['optimizer_params'])
 
         if log_every and episode and episode % log_every == 0:
             avg_score = mean(scores[-log_every:])

@@ -1,14 +1,14 @@
-wrapper_name: GNNWrapper
-agent_name: Agent_for_gnn
+wrapper_name: GATv2Wrapper
+agent_name: Agent
 train_params:
     device: cuda:0
-    epoch: 5 ## epoch for trainings
+    epochs: 50 ## epoch for trainings
     episodes: 2000 ## times to play
-    train_every: 1 ## training interval
-    batch_size: 512
+    train_every: 10 ## training interval
+    batch_size: 32
     max_steps:  ## step to play, None means play until the game over
     render_every: 50
-    render_delay:
+    render_delay: False
     log_every: 10
 optimizer_params:
     opt: radam
@@ -19,8 +19,19 @@ optimizer_params:
     milestones: [5, 10, 15, 20]
     gamma: 0.2
 model_params:
-    in_channels: 10
-    out_channels: 10
+    in_channels: 1
+    out_channels: 1
+    heads: 3
     model_name: gatv2
     model_type: gnn
+    dropout: 0.2
+    negative_slope: 0.2
     parameters_path: ./Models/Parameters/
+    bias: True
+    add_self_loop: True
+    positional_embedding: True
+    img_size: [20, 10]
+    patch_size: [2 ,2]
+    embed_dim: 32
+    layers: 3
+    pooling: set2set

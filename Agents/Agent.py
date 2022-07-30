@@ -4,6 +4,7 @@ import numpy as np
 import random
 from collections import deque
 
+from tqdm import tqdm
 from Models.utils import build_optimizer
 
 # Deep Q Learning Agent + Maximin
@@ -32,11 +33,10 @@ class Agent:
         replay_start_size: Minimum size needed to train
     '''
 
-    def __init__(self, state_size, tb_handler, device, mem_size=10000, discount=0.95,
+    def __init__(self, tb_handler, device, mem_size=10000, discount=0.95,
                  epsilon=1, epsilon_min=0, epsilon_stop_episode=500, replay_start_size=None):
 
 
-        self.state_size = state_size
         self.memory = deque(maxlen=mem_size)
         self.discount = discount
         self.epsilon = epsilon
@@ -62,21 +62,22 @@ class Agent:
     def predict_value(self, state):
         '''Predicts the score for a certain state'''
 
-        return self.tb_handler.model(state)
+        return self.tb_handler.model(self.transform(state))
 
 
     def transform(self, state):
         '''Transform state to special form'''
-        return torch.Tensor(state)
+        return torch.Tensor(state).to(self.device)
 
 
     def act(self, state):
         '''Returns the expected score of a certain state'''
-        state = np.reshape(state, [1, self.state_size])
         if random.random() <= self.epsilon:
             return self.random_value()
         else:
-            return self.predict_value(state)
+            self.tb_handler.model.eval()
+            with torch.no_grad():
+                return self.predict_value(state)
 
 
     def best_state(self, states: dict):
@@ -90,9 +91,10 @@ class Agent:
             best_state = states[best_action]
 
         else:
+            self.tb_handler.model.eval()
             with torch.no_grad():
                 for action, state in states.items():
-                    value = self.predict_value(self.transform(state).to(self.device))
+                    value = self.predict_value(state)
                     if not max_value or value > max_value:
                         max_value = value
                         best_state = state
@@ -108,14 +110,14 @@ class Agent:
     
         if n >= self.replay_start_size and n >= batch_size:
 
-            scheduler, optimizer = build_optimizer(optimizer_params, self.tb.model.parameters())
+            scheduler, optimizer = build_optimizer(optimizer_params, self.tb_handler.model.parameters())
 
-            for epoch in range(epochs):
+            for epoch in tqdm(range(epochs), desc = 'Agent Learning'):
 
                 batch = random.sample(self.memory, batch_size)
 
                 # Get the expected score for the next states, in batch (better performance)
-                next_states = np.array([x[1] for x in batch])
+                # next_states = np.array([x[1] for x in batch])
                 # self.tb_handler.model.eval()
                 # with torch.no_grad():
                 #     next_qs = [x[0] for x in self.predict_value(self.transform(next_states).to(self.device))]
@@ -129,11 +131,11 @@ class Agent:
                     for i, (state, next_state, reward, done) in enumerate(batch):
                         if not done:
                             # Partial Q formula
-                            new_q = reward + self.discount * self.predict_value(self.transform(next_state).to(self.device))
+                            new_q = reward + self.discount * self.predict_value(next_state)
                         else:
                             new_q = reward
 
-                        x.append(self.transform(state))
+                        x.append(state)
                         y.append(new_q)
 
                 x = torch.Tensor(x).to(self.device)
@@ -142,7 +144,7 @@ class Agent:
                 # Fit the model to the given values
                 self.tb_handler.model.train()
                 optimizer.zero_grad()
-                self.tb_handler.add_graph(x)
+                # self.tb_handler.add_graph(x)
                 preds = self.tb_handler.model(x).reshape(-1, 1)
 
                 loss = self.tb_handler.model.loss(preds, y)
@@ -152,7 +154,7 @@ class Agent:
                     scheduler.step()
 
                 self.tb_handler.show_params(times * epochs + epoch)
-                self.tb_handler.add_scalar(self, loss.item(), times * epochs + epoch, 'loss')
+                self.tb_handler.add_scalar(loss.item(), times * epochs + epoch, 'loss')
 
             # Update the exploration variable
             if self.epsilon > self.epsilon_min:
