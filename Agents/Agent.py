@@ -116,22 +116,19 @@ class Agent:
 
             scheduler, optimizer = build_optimizer(optimizer_params, self.tb_handler.model.parameters())
 
-            for epoch in tqdm(range(epochs), desc = 'Agent Learning'):
+            dataset = []
 
-                batch = random.sample(self.memory, batch_size)
+            ## data preprocessing, generate training data
+            self.tb_handler.model.eval()
+            with torch.no_grad():
+                for epoch in tqdm(range(epochs), desc = 'Agent Predicting'):
 
-                # Get the expected score for the next states, in batch (better performance)
-                # next_states = np.array([x[1] for x in batch])
-                # self.tb_handler.model.eval()
-                # with torch.no_grad():
-                #     next_qs = [x[0] for x in self.predict_value(self.transform(next_states).to(self.device))]
+                    batch = random.sample(self.memory, batch_size)
 
-                x = []
-                y = []
+                    x = []
+                    y = []
 
-                # Build xy structure to fit the model in batch (better performance)
-                self.tb_handler.model.eval()
-                with torch.no_grad():
+                    # Build xy structure to fit the model in batch (better performance)
                     for i, (state, next_state, reward, done) in enumerate(batch):
                         if not done:
                             # Partial Q formula
@@ -142,11 +139,18 @@ class Agent:
                         x.append(state)
                         y.append(new_q)
 
+                    dataset.append((x, y))
+
+            
+            self.tb_handler.model.train()
+            for epoch in tqdm(range(epochs), desc = 'Agent Learning'):
+
+                # unpack dataset
+                x, y = dataset[epoch]
                 x = torch.Tensor(x).to(self.device)
                 y = torch.Tensor(y).to(self.device).reshape(-1, 1)
 
                 # Fit the model to the given values
-                self.tb_handler.model.train()
                 optimizer.zero_grad()
                 # self.tb_handler.add_graph(x)
                 preds = self.tb_handler.model(x).reshape(-1, 1)

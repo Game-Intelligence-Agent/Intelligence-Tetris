@@ -79,9 +79,9 @@ def main():
             min_score = min(scores[-log_every:])
             max_score = max(scores[-log_every:])
 
-            tb.add_scalar(avg_score, episode / log_every, f'Avg Score every {log_every} Episode')
-            tb.add_scalar(max_score, episode / log_every, f'Max Score every {log_every} Episode')
-            tb.add_scalar(min_score, episode / log_every, f'Min Score every {log_every} Episode')
+            tb.add_scalar(avg_score, episode, f'Avg Score every {log_every} Episode')
+            tb.add_scalar(max_score, episode, f'Max Score every {log_every} Episode')
+            tb.add_scalar(min_score, episode, f'Min Score every {log_every} Episode')
 
             print(f'Episode {episode}----------------------------------------------\n[Scores For Last {log_every} Games] Avg Score: {avg_score}, Max Score: {max_score}, Min Score: {min_score}')
 
@@ -89,7 +89,7 @@ def main():
                 best_max = max_score
                 best_model = deepcopy(agent.tb_handler.model)
 
-        if episode > 0 and episode % args.train_hyper['train_params']['save_every'] == 0:
+        if train_time > 0 and train_time % args.train_hyper['train_params']['save_every'] == 0:
             # print(best_model.state_dict())
             best_model.save_parameters()
 
