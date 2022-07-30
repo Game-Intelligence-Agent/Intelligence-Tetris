@@ -107,8 +107,12 @@ class Agent:
 
         '''Trains the agent'''
         n = len(self.memory)
+
+        if_train = 0
     
         if n >= self.replay_start_size and n >= batch_size:
+
+            if_train = 1
 
             scheduler, optimizer = build_optimizer(optimizer_params, self.tb_handler.model.parameters())
 
@@ -159,3 +163,5 @@ class Agent:
             # Update the exploration variable
             if self.epsilon > self.epsilon_min:
                 self.epsilon -= self.epsilon_decay
+
+        return if_train

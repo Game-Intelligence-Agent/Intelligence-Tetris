@@ -43,43 +43,35 @@ class GATv2Wrapper(Wrapper):
             model_type,
             parameters_path)
 
-        self.load_parameters()
-
         self.layers = layers
 
-        if self.model is None:
+        self.patch_embed = PatchEmbed(img_size = img_size, patch_size = patch_size, embed_dim = embed_dim, in_chans = in_channels)
+        self.num_patches = self.patch_embed.num_patches
+        self.embed_dim = embed_dim
+        self.pos_embed = torch.nn.Parameter(torch.zeros(in_channels, self.num_patches, embed_dim)) if positional_embedding else torch.nn.Parameter(torch.zeros(in_channels, self.num_patches, embed_dim), requires_grad = False)
 
-            self.model = torch.nn.ModuleDict()
-            self.model['patch_embed'] = PatchEmbed(img_size = img_size, patch_size = patch_size, embed_dim = embed_dim, in_chans = in_channels)
-            self.num_patches = self.model['patch_embed'].num_patches
-            self.embed_dim = embed_dim
-            self.model['Parameters'] = torch.nn.ParameterDict()
-            self.model['Parameters']['pos_embed'] = torch.nn.Parameter(torch.zeros(in_channels, self.num_patches, embed_dim)) if positional_embedding else torch.nn.Parameter(torch.zeros(in_channels, num_patches, embed_dim), requires_grad = False)
+        self.model = torch.nn.ModuleDict()
+        for idx in range(1, layers + 1):
 
-            for idx in range(1, layers + 1):
+            self.model[f'GraphConv{idx}'] = GATv2Conv(in_channels = embed_dim, out_channels = embed_dim, heads = heads, concat = False, dropout = dropout, negative_slope = negative_slope, bias = bias, add_self_loops = add_self_loop)
+            self.model[f'activation{idx}'] = torch.nn.Sequential(torch.nn.LeakyReLU(negative_slope = negative_slope))
 
-                self.model[f'GraphConv{idx}'] = GATv2Conv(in_channels = embed_dim, out_channels = embed_dim, heads = heads, concat = False, dropout = dropout, negative_slope = negative_slope, bias = bias, add_self_loops = add_self_loop)
-                self.model[f'activation{idx}'] = torch.nn.Sequential(torch.nn.LeakyReLU(negative_slope = negative_slope))
-
-            self.model['after_mapping'] = torch.nn.Sequential(torch.nn.Linear(embed_dim, out_channels, bias = bias))
-            if pooling == 'set2set':
-                self.model['readout'] = Set2Set(embed_dim, processing_steps = 2)
-                self.model['after_mapping'] = torch.nn.Sequential(torch.nn.Linear(2 * embed_dim, out_channels))
-            elif pooling == 'attention':
-                self.model['readout'] = GlobalAttention(gate_nn = torch.nn.Sequential(torch.nn.Linear(embed_dim, embed_dim, bias = bias), torch.nn.BatchNorm1d(embed_dim), torch.nn.ReLU(), torch.nn.Linear(embed_dim, 1, bias = bias)))
-            elif pooling == 'add':
-                self.model['readout'] = global_add_pool
-            elif pooling == 'mean':
-                self.model['readout'] = global_mean_pool
-            elif pooling == 'max':
-                self.model['readout'] = global_max_pool
-                
-        else:
-
-            self.num_patches = self.model['patch_embed'].num_patches
-            self.embed_dim = self.model['patch_embed'].embed_dim
+        self.after_mapping = torch.nn.Sequential(torch.nn.Linear(embed_dim, out_channels, bias = bias))
+        if pooling == 'set2set':
+            self.readout = Set2Set(embed_dim, processing_steps = 2)
+            self.after_mapping = torch.nn.Sequential(torch.nn.Linear(2 * embed_dim, out_channels))
+        elif pooling == 'attention':
+            self.readout = GlobalAttention(gate_nn = torch.nn.Sequential(torch.nn.Linear(embed_dim, embed_dim, bias = bias), torch.nn.BatchNorm1d(embed_dim), torch.nn.ReLU(), torch.nn.Linear(embed_dim, 1, bias = bias)))
+        elif pooling == 'add':
+            self.readout= global_add_pool
+        elif pooling == 'mean':
+            self.readout = global_mean_pool
+        elif pooling == 'max':
+            self.readout = global_max_pool
         
         self.adj = torch.ones((self.num_patches, self.num_patches))
+
+        self.load_parameters()
 
     def forward(self, x: torch.Tensor):
 
@@ -94,8 +86,8 @@ class GATv2Wrapper(Wrapper):
 
         size = x.shape[0]
             
-        x = self.model['patch_embed'](x)
-        x = x + self.model['Parameters']['pos_embed']
+        x = self.patch_embed(x)
+        x = x + self.pos_embed
 
         # print(x.shape)
 
@@ -118,9 +110,9 @@ class GATv2Wrapper(Wrapper):
 
         # print(batch.shape)
 
-        out = self.model['readout'](out, batch)
+        out = self.readout(out, batch)
         # print(out.shape)
-        out = self.model['after_mapping'](out)
+        out = self.after_mapping(out)
         # print(out.shape)
 
         return out

@@ -4,6 +4,7 @@ from Models.Parameters import hyper_loader
 from Models.Wrappers import *
 
 import random
+from copy import deepcopy
 from Models.utils.tensorboard_handler import tb_handler
 from tqdm import tqdm
 from datetime import datetime
@@ -42,6 +43,9 @@ def main():
 
     scores = []
 
+    train_time, best_max, best_avg, best_min = 0, 0, 0, 100
+    best_model = None
+
     for episode in range(args.train_hyper['train_params']['episodes']):
 
         current_state = env.reset()
@@ -68,7 +72,7 @@ def main():
 
         # Train
         if episode % args.train_hyper['train_params']['train_every'] == 0:
-            agent.train(batch_size = args.train_hyper['train_params']['batch_size'], epochs = args.train_hyper['train_params']['epochs'], times = int(episode / args.train_hyper['train_params']['train_every']), optimizer_params = args.train_hyper['optimizer_params'])
+            train_time += agent.train(batch_size = args.train_hyper['train_params']['batch_size'], epochs = args.train_hyper['train_params']['epochs'], times = train_time, optimizer_params = args.train_hyper['optimizer_params'])
 
         if log_every and episode and episode % log_every == 0:
             avg_score = mean(scores[-log_every:])
@@ -81,6 +85,13 @@ def main():
 
             print(f'Episode {episode}----------------------------------------------\n[Scores For Last {log_every} Games] Avg Score: {avg_score}, Max Score: {max_score}, Min Score: {min_score}')
 
+            if best_max <= max_score:
+                best_max = max_score
+                best_model = deepcopy(agent.tb_handler.model)
+
+        if episode > 0 and episode % args.train_hyper['train_params']['save_every'] == 0:
+            # print(best_model.state_dict())
+            best_model.save_parameters()
 
 if __name__ == "__main__":
     main()

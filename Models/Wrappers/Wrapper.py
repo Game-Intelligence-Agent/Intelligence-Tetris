@@ -31,12 +31,12 @@ class Wrapper(nn.Module):
     def load_parameters(self):
         
         if os.path.exists(f'{self.path}/{self.model_name}_{self.model_type}.pth'):
-            self.model = torch.load(f'{self.path}/{self.model_name}_{self.model_type}.pth')
+            self.load_state_dict(torch.load(f'{self.path}/{self.model_name}_{self.model_type}.pth'))
         
     @time_handlers.timer
     def save_parameters(self):
         
-        torch.save(self.model, f'{self.path}/{self.model_name}_{self.model_type}.pth')
+        torch.save(self.state_dict(), f'{self.path}/{self.model_name}_{self.model_type}.pth')
 
     def forward(self, x):
         pass
