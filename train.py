@@ -89,7 +89,7 @@ def main():
                 best_max = max_score
                 best_model = deepcopy(agent.tb_handler.model)
 
-        if train_time > 0 and train_time % args.train_hyper['train_params']['save_every'] == 0:
+        if train_time > 0 and episode % args.train_hyper['train_params']['save_every'] == 0:
             # print(best_model.state_dict())
             best_model.save_parameters()
 
