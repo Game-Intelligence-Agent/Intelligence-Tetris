@@ -34,7 +34,8 @@ def main():
 
     ## model
     model = eval(args.train_hyper['wrapper_name'])(**args.train_hyper['model_params']).to(args.train_hyper['train_params']['device'])
-    tb = tb_handler('./Models/runs/', args.train_hyper['wrapper_name'], model)
+    name = args.train_hyper['model_params']['model_name'] + '_' + args.train_hyper['model_params']['model_type']
+    tb = tb_handler('./Models/runs/', f'{name}', model)
 
     # print(tb.model.state_dict())
 
