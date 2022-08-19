@@ -1,5 +1,6 @@
 from Agents import *
 from Games import Tetris
+from Logger import Logger
 from Models.Parameters import hyper_loader
 from Models.Wrappers import *
 
@@ -30,68 +31,118 @@ def main():
     log_every = args.train_hyper['train_params']['log_every']
 
     ## env
-    env = Tetris()
+    env = Tetris(width = 10, height = 20, block_size = 30, mode = args.train_hyper['game_mode'])
 
     ## model
     model = eval(args.train_hyper['wrapper_name'])(**args.train_hyper['model_params']).to(args.train_hyper['train_params']['device'])
     name = args.train_hyper['model_params']['model_name'] + '_' + args.train_hyper['model_params']['model_type']
     tb = tb_handler('./Models/runs/', f'{name}', model)
+    scheduler, optimizer = build_optimizer(args.train_hyper['optimizer_params'], tb.model.parameters())
 
-    # print(tb.model.state_dict())
+    # print(tb.tb.model.state_dict())
 
-    ## agentprint
-    agent = Agent(tb_handler = tb, device = args.train_hyper['train_params']['device'], **args.agent_hyper)
-
-    scores = []
+    scores, tetrominoes, cleared_lines = [], [], []
 
     train_time, best_max, best_avg, best_min = 0, 0, 0, 100
     best_model = None
 
-    for episode in range(args.train_hyper['train_params']['episodes']):
+    replay_memory = deque(maxlen = args.agent_hyper['mem_size'])
 
-        current_state = env.reset()
-        done = False
-        steps = 0
+    episode = 0
+    print('start to play')
+    state = env.reset()
+    state = state.to(args.train_hyper['train_params']['device'])
+    while episode < args.train_hyper['train_params']['episodes']:
+        next_steps = env.get_next_states()
+        # Exploration or exploitation
+        epsilon = args.agent_hyper['epsilon_min'] + (max(args.agent_hyper['epsilon_stop_episode'] - episode, 0) * (
+                args.agent_hyper['epsilon'] - args.agent_hyper['epsilon_min']) / args.agent_hyper['epsilon_stop_episode'])
+        u = random.random()
+        random_action = u <= epsilon
+        next_actions, next_states = zip(*next_steps.items())
+        next_states = torch.stack(next_states)
+        if torch.cuda.is_available():
+            next_states = next_states.to(args.train_hyper['train_params']['device'])
+        tb.model.eval()
+        with torch.no_grad():
+            predictions = tb.model(next_states)[:, 0]
+        tb.model.train()
+        if random_action:
+            index = random.randint(0, len(next_steps) - 1)
+        else:
+            index = torch.argmax(predictions).item()
 
-        if args.train_hyper['train_params']['render_every'] and episode % args.train_hyper['train_params']['render_every'] == 0:
+        next_state = next_states[index, :]
+        action = next_actions[index]
+
+        if episode > 0 and episode % args.train_hyper['train_params']['render_every'] == 0:
             render = True
         else:
             render = False
+        reward, done = env.step(action, render = render)
 
-        # Game
-        while not done and (not args.train_hyper['train_params']['max_steps'] or steps < args.train_hyper['train_params']['max_steps']):
-            next_states = env.get_next_states()
-            best_action, best_state = agent.best_state(next_states)
+        if torch.cuda.is_available():
+            next_state = next_state.to(args.train_hyper['train_params']['device'])
+        replay_memory.append([state, reward, next_state, done])
 
-            reward, done = env.play(best_action[0], best_action[1], render = render, render_delay = args.train_hyper['train_params']['render_delay'])
-            
-            agent.add_to_memory(current_state, best_state, reward, done)
-            current_state = best_state
-            steps += 1
+        if done:
+            scores.append(env.score)
+            tetrominoes.append(env.tetrominoes)
+            cleared_lines.append(env.cleared_lines)
+            state = env.reset()
+            if torch.cuda.is_available():
+                state = state.to(args.train_hyper['train_params']['device'])
+        else:
+            state = next_state
+            continue
 
-        scores.append(env.get_game_score())
+        if len(replay_memory) < args.agent_hyper['replay_start_size'] / 10:
+            continue
 
-        # Train
-        if episode % args.train_hyper['train_params']['train_every'] == 0:
-            train_time += agent.train(batch_size = args.train_hyper['train_params']['batch_size'], epochs = args.train_hyper['train_params']['epochs'], times = train_time, optimizer_params = args.train_hyper['optimizer_params'])
+        print(f'training for epoch {episode}')
+        episode += 1
+        ## 需要调整更新频率 看完再更新 每次预测不变
+        for epoch in range(args.train_hyper['train_params']['epochs']):
+            batch = random.sample(replay_memory, min(len(replay_memory), args.train_hyper['train_params']['batch_size']))
+            state_batch, reward_batch, next_state_batch, done_batch = zip(*batch)
+            state_batch = torch.stack(tuple(state for state in state_batch))
+            reward_batch = torch.from_numpy(np.array(reward_batch, dtype=np.float32)[:, None])
+            next_state_batch = torch.stack(tuple(state for state in next_state_batch))
+
+            if torch.cuda.is_available():
+                state_batch = state_batch.to(args.train_hyper['train_params']['device'])
+                reward_batch = reward_batch.to(args.train_hyper['train_params']['device'])
+                next_state_batch = next_state_batch.to(args.train_hyper['train_params']['device'])
+
+            q_values = tb.model(state_batch)
+            tb.model.eval()
+            with torch.no_grad():
+                next_prediction_batch = tb.model(next_state_batch)
+            tb.model.train()
+
+            y_batch = torch.cat(
+                tuple(reward if done else reward + args.agent_hyper['discount'] * prediction for reward, done, prediction in
+                    zip(reward_batch, done_batch, next_prediction_batch)))[:, None]
+
+            optimizer.zero_grad()
+            loss = tb.model.loss(q_values, y_batch)
+            loss.backward()
+            optimizer.step()
 
         if log_every and episode and episode % log_every == 0:
-            avg_score = mean(scores[-log_every:])
-            min_score = min(scores[-log_every:])
-            max_score = max(scores[-log_every:])
 
-            tb.add_scalar(avg_score, episode, f'Avg Score every {log_every} Episode')
-            tb.add_scalar(max_score, episode, f'Max Score every {log_every} Episode')
-            tb.add_scalar(min_score, episode, f'Min Score every {log_every} Episode')
+            print(f'Episode {episode}----------------------------------------------')
 
-            print(f'Episode {episode}----------------------------------------------\n[Scores For Last {log_every} Games] Avg Score: {avg_score}, Max Score: {max_score}, Min Score: {min_score}')
+            max_score, _, _ = Logger.log_result(tb, 'score', scores, log_every, episode)
+            Logger.log_result(tb, 'cleared_line', cleared_lines, log_every, episode)
+            Logger.log_result(tb, 'tetrominoe', tetrominoes, log_every, episode)
 
             if best_max <= max_score:
                 best_max = max_score
-                best_model = deepcopy(agent.tb_handler.model)
+                best_model = deepcopy(tb.model)
 
-        if train_time > 0 and episode % args.train_hyper['train_params']['save_every'] == 0:
-            # print(best_model.state_dict())
+        if episode > 0 and episode % args.train_hyper['train_params']['save_every'] == 0:
+            # print(best_tb.model.state_dict())
             best_model.save_parameters()
 
 if __name__ == "__main__":
