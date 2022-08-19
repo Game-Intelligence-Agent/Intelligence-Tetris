@@ -77,7 +77,7 @@ def main():
         next_state = next_states[index, :]
         action = next_actions[index]
 
-        if episode > 0 and episode % args.train_hyper['train_params']['render_every'] == 0:
+        if args.train_hyper['train_params']['render_every'] is not None and episode > 0 and episode % args.train_hyper['train_params']['render_every'] == 0:
             render = True
         else:
             render = False
