@@ -1,6 +1,6 @@
-mem_size: 20000
-discount: 0.95
+mem_size: 30000
+discount: 0.99
 epsilon: 1
-epsilon_min: 0
-epsilon_stop_episode: 500
-replay_start_size: 2000
+epsilon_min: 1.0e-3
+epsilon_stop_episode: 2000
+replay_start_size: 3000

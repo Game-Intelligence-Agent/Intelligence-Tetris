@@ -1,10 +1,10 @@
 wrapper_name: GATv2Wrapper
 agent_name: Agent
+game_mode: matrix
 train_params:
     device: cuda:0
     epochs: 10 ## epoch for trainings
-    episodes: 2000 ## times to play
-    train_every: 5 ## training interval
+    episodes: 5000 ## times to play
     batch_size: 64
     max_steps:  ## step to play, None means play until the game over.
     render_every: 20
@@ -13,11 +13,11 @@ train_params:
     save_every: 20
 optimizer_params:
     opt: radam
-    lr: 0.01
+    lr: 0.001
     weight_decay: 0.0001
     lookahead: True
-    opt_scheduler: multistep
-    milestones: [25]
+    opt_scheduler: none
+    milestones: [5, 10, 15, 20, 25]
     gamma: 0.2
 model_params:
     in_channels: 1

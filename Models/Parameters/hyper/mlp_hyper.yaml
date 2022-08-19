@@ -1,0 +1,31 @@
+wrapper_name: MLPWrapper
+agent_name: Agent
+game_mode: feature
+train_params:
+    device: cuda:0
+    epochs: 1 ## epoch for trainings
+    episodes: 5000 ## times to play
+    batch_size: 512
+    max_steps:  ## step to play, None means play until the game over.
+    render_every: 50
+    render_delay: False
+    log_every: 50
+    save_every: 50
+optimizer_params:
+    opt: adam
+    amsgrad: True
+    lr: 0.001
+    weight_decay: 0.0001
+    lookahead: True
+    opt_scheduler: none
+    milestones: [5, 10, 15, 20, 25]
+    gamma: 0.2
+model_params:
+    in_channels: 4
+    hidden_channels: 64
+    out_channels: 1
+    model_name: mlpv1
+    model_type: mlp
+    parameters_path: ./Models/Parameters/
+    layers: 4
+
