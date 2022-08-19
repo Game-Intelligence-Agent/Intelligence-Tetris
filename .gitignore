@@ -1,3 +1,16 @@
 test.ipynb
 Models/runs/GATv2Wrapper/events.out.tfevents.1659180630.DESKTOP-5MDG2IB.31188.0
 Agents/__pycache__/Agent.cpython-36.pyc
+Agents/__pycache__/__init__.cpython-39.pyc
+Agents/__pycache__/Agent.cpython-36.pyc
+Agents/__pycache__/Agent.cpython-39.pyc
+Agents/__pycache__/Agent.cpython-36.pyc
+Games/__pycache__/tetris.cpython-36.pyc
+Logger/__pycache__/__init__.cpython-36.pyc
+Logger/__pycache__/Logger.cpython-36.pyc
+Models/runs/gatv2_gnn/events.out.tfevents.1660880995.DESKTOP-5MDG2IB.26760.0
+Models/runs/gatv2_gnn/events.out.tfevents.1660881120.DESKTOP-5MDG2IB.25140.0
+Models/runs/mlpv1_mlp/events.out.tfevents.1660876657.DESKTOP-5MDG2IB.25964.0
+Models/Wrappers/__pycache__/__init__.cpython-36.pyc
+Models/Wrappers/__pycache__/GNNWrapper.cpython-36.pyc
+Models/Wrappers/__pycache__/MLPWrapper.cpython-36.pyc
