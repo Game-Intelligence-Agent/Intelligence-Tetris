@@ -1,8 +1,8 @@
-from Agents import *
 from Games import Tetris
 from Logger import Logger
 from Models.Parameters import hyper_loader
 from Models.Wrappers import *
+from Models.utils import build_optimizer
 
 import random
 from copy import deepcopy
@@ -10,6 +10,8 @@ from Models.utils.tensorboard_handler import tb_handler
 from tqdm import tqdm
 from datetime import datetime
 from statistics import mean, median
+from collections import deque
+import numpy as np
 
 
 def get_args():
