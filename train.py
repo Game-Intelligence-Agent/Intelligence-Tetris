@@ -37,6 +37,7 @@ def main():
 
     ## model
     model = eval(args.train_hyper['wrapper_name'])(**args.train_hyper['model_params']).to(args.train_hyper['train_params']['device'])
+    target_model = deepcopy(model)
     name = args.train_hyper['model_params']['model_name'] + '_' + args.train_hyper['model_params']['model_type']
     tb = tb_handler('./Models/runs/', f'{name}', model)
     scheduler, optimizer = build_optimizer(args.train_hyper['optimizer_params'], tb.model.parameters())
@@ -104,6 +105,7 @@ def main():
         print(f'training for epoch {episode}')
         episode += 1
         ## 需要调整更新频率 看完再更新 每次预测不变
+        target_model.load_state(tb.model.state_dict())
         for epoch in range(args.train_hyper['train_params']['epochs']):
             batch = random.sample(replay_memory, min(len(replay_memory), args.train_hyper['train_params']['batch_size']))
             state_batch, reward_batch, next_state_batch, done_batch = zip(*batch)
@@ -119,7 +121,7 @@ def main():
             q_values = tb.model(state_batch)
             tb.model.eval()
             with torch.no_grad():
-                next_prediction_batch = tb.model(next_state_batch)
+                next_prediction_batch = target_model(next_state_batch)
             tb.model.train()
 
             y_batch = torch.cat(
