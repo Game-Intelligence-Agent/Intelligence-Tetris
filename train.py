@@ -105,7 +105,7 @@ def main():
         print(f'training for epoch {episode}')
         episode += 1
         ## 需要调整更新频率 看完再更新 每次预测不变
-        target_model.load_state(tb.model.state_dict())
+        target_model.load_state_dict(tb.model.state_dict())
         for epoch in range(args.train_hyper['train_params']['epochs']):
             batch = random.sample(replay_memory, min(len(replay_memory), args.train_hyper['train_params']['batch_size']))
             state_batch, reward_batch, next_state_batch, done_batch = zip(*batch)
