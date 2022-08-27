@@ -118,12 +118,13 @@ def main():
                 reward_batch = reward_batch.to(args.train_hyper['train_params']['device'])
                 next_state_batch = next_state_batch.to(args.train_hyper['train_params']['device'])
 
-            q_values = tb.model(state_batch)
-            tb.model.eval()
+            target_model.eval()
             with torch.no_grad():
                 next_prediction_batch = target_model(next_state_batch)
-            tb.model.train()
 
+            tb.model.train()
+            q_values = tb.model(state_batch)
+                
             y_batch = torch.cat(
                 tuple(reward if done else reward + args.agent_hyper['discount'] * prediction for reward, done, prediction in
                     zip(reward_batch, done_batch, next_prediction_batch)))[:, None]
