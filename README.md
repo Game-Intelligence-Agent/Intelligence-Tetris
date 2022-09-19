@@ -6,27 +6,13 @@
 
 In this project, we are trying to train an Game Agent which use GNN-based Model as Encoder and use DQN as Agent training model for Tetris. The Environment of this game is based on https://github.com/uvipen/Tetris-deep-Q-learning-pytorch whose game environment is shown as above.
 
-## How to Run
-
-In order to train your personal model, firstly, you should go to ./Models/Parameters/hyper/gnn_hyper.yaml to change the hyper parameters of your model. Also, you can change the hyper parameters for the Game Agent in ./Models/Parameters/hyper/agent_hyper.yaml. Then you can run your model with the code showing below.
-
-```shell
-$ python train.py
-```
-
-What's more, you can use the following command to monitor the training status with tensorboard
-
-```shell
-$ tensorboard --logdir=./Models/runs/ port=6006
-```
-
 ## Project Structure
 
 ```python
 project
 |   __init__.py
 |   train.py                                   ## training script
-|   environment.txt                            ## project environment
+|   environment.yaml                            ## project environment
 |-- Games                                      ## Game related files
 |   |   __init__.py
 |   |   tetris.py                              ## game environment
@@ -55,6 +41,28 @@ project
 |   |   |   __init__.py
 |   |   |   Wrapper.py                         ## father class of all wrappers
 |   |   |   GNNWrapper.py                      ## Wrapper Class of GNN-based Game State Encoder for this project
+```
+
+## How to Run
+
+In order to train your personal model, firstly, you should go to ./Models/Parameters/hyper/gnn_hyper.yaml to change the hyper parameters of your model. Also, you can change the hyper parameters for the Game Agent in ./Models/Parameters/hyper/agent_hyper.yaml. Then you can run your model with the code showing below.
+
+```shell
+$ python train.py
+```
+
+What's more, you can use the following command to monitor the training status with tensorboard
+
+```shell
+$ tensorboard --logdir=./Models/runs/ port=6006
+```
+
+## Environmental Requirement
+
+The environmental requirement for this project is described in environment.yaml. If you are a windows user, you can import the environment directly into conda by the command given below.
+
+```shell
+$ conda env create -f environment.yaml
 ```
 
 ## Hyper Parameters Explanation
