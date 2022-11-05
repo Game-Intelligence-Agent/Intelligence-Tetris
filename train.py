@@ -110,32 +110,33 @@ def main():
         ## 需要调整更新频率 看完再更新 每次预测不变
         target_model.load_state_dict(tb.model.state_dict())
         optimizer.zero_grad()
-        for _ in range(args.train_hyper['train_params']['splits']):
-            batch = random.sample(replay_memory, min(len(replay_memory), args.train_hyper['train_params']['batch_size']))
-            state_batch, reward_batch, next_state_batch, done_batch = zip(*batch)
-            state_batch = torch.stack(tuple(state for state in state_batch))
-            reward_batch = torch.from_numpy(np.array(reward_batch, dtype=np.float32)[:, None])
-            next_state_batch = torch.stack(tuple(state for state in next_state_batch))
+        for epoch in range(args.train_hyper['train_params']['epochs']):
+            for _ in range(args.train_hyper['train_params']['splits']):
+                batch = random.sample(replay_memory, min(len(replay_memory), args.train_hyper['train_params']['batch_size']))
+                state_batch, reward_batch, next_state_batch, done_batch = zip(*batch)
+                state_batch = torch.stack(tuple(state for state in state_batch))
+                reward_batch = torch.from_numpy(np.array(reward_batch, dtype=np.float32)[:, None])
+                next_state_batch = torch.stack(tuple(state for state in next_state_batch))
 
-            if torch.cuda.is_available():
-                state_batch = state_batch.to(args.train_hyper['train_params']['device'])
-                reward_batch = reward_batch.to(args.train_hyper['train_params']['device'])
-                next_state_batch = next_state_batch.to(args.train_hyper['train_params']['device'])
+                if torch.cuda.is_available():
+                    state_batch = state_batch.to(args.train_hyper['train_params']['device'])
+                    reward_batch = reward_batch.to(args.train_hyper['train_params']['device'])
+                    next_state_batch = next_state_batch.to(args.train_hyper['train_params']['device'])
 
-            target_model.eval()
-            with torch.no_grad():
-                next_prediction_batch = target_model(next_state_batch)
+                target_model.eval()
+                with torch.no_grad():
+                    next_prediction_batch = target_model(next_state_batch)
 
-            tb.model.train()
-            q_values = tb.model(state_batch)
-                
-            y_batch = torch.cat(
-                tuple(reward if done else reward + args.agent_hyper['discount'] * prediction for reward, done, prediction in
-                    zip(reward_batch, done_batch, next_prediction_batch)))[:, None]
+                tb.model.train()
+                q_values = tb.model(state_batch)
+                    
+                y_batch = torch.cat(
+                    tuple(reward if done else reward + args.agent_hyper['discount'] * prediction for reward, done, prediction in
+                        zip(reward_batch, done_batch, next_prediction_batch)))[:, None]
 
-            loss = tb.model.loss(q_values, y_batch)
-            loss.backward()
-        optimizer.step()
+                loss = tb.model.loss(q_values, y_batch)
+                loss.backward()
+            optimizer.step()
 
         if log_every and episode and episode % log_every == 0:
 
