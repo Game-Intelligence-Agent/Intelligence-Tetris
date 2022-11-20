@@ -18,6 +18,7 @@ optimizer_params:
     weight_decay: 0.0001
     lookahead: False
     opt_scheduler: none
+    amsgrad: True
     opt_decay_step: 1
     milestones: [5, 10, 15, 20, 25]
     gamma: 0.995
@@ -39,4 +40,5 @@ model_params:
     embed_dim: 32
     layers: 3
     pooling: set2set
+    mode: fully_connected
 

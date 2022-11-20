@@ -1,5 +1,6 @@
 from Models.Wrappers import Wrapper
 from Models.Modules import PatchEmbed
+from Models.utils.adj_generator import *
 
 import torch
 from torch_geometric.nn import GATv2Conv
@@ -28,6 +29,7 @@ class GATv2Wrapper(Wrapper):
         embed_dim: int = 32,
         layers: int = 3,
         pooling: str = 'none',
+        mode: str = 'fully_connected',
         **kwargs,
         ):
 
@@ -65,7 +67,7 @@ class GATv2Wrapper(Wrapper):
         elif pooling == 'max':
             self.readout = global_max_pool
         
-        self.adj = torch.ones((self.num_patches, self.num_patches))
+        self.adj = eval(mode)(self.num_patches, self.patch_embed.grid_size)
 
         self.load_parameters()
 
@@ -78,7 +80,7 @@ class GATv2Wrapper(Wrapper):
         elif len(x.shape) == 2:
             x = x.unsqueeze(0).unsqueeze(0)
 
-        # print(x.shape)
+        print(x.shape)
 
         size = x.shape[0]
             
