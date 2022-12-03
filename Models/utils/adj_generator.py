@@ -1,7 +1,7 @@
 import torch
 
 
-def fully_connect(num_patches,  grid_size):
+def fully_connected(num_patches,  grid_size):
 
     return torch.ones((num_patches, num_patches))
 
