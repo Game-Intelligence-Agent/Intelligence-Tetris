@@ -80,7 +80,7 @@ class GATv2Wrapper(Wrapper):
         elif len(x.shape) == 2:
             x = x.unsqueeze(0).unsqueeze(0)
 
-        print(x.shape)
+        # print(x.shape)
 
         size = x.shape[0]
             
