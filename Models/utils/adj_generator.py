@@ -13,6 +13,8 @@ def direct_one_hop(num_patches, grid_size):
 
     for node in range(num_patches):
 
+        res = node % length
+
         if node - length > 0:
             adj[node, node - length] = 1
             adj[node - length, node] = 1
@@ -21,11 +23,11 @@ def direct_one_hop(num_patches, grid_size):
             adj[node, node + length] = 1
             adj[node + length, node] = 1
 
-        if node - 1 > 0:
+        if res - 1 >= 0:
             adj[node, node - 1] = 1
             adj[node - 1, node] = 1
         
-        if node + 1 < num_patches - 1:
+        if res + 1 < length:
             adj[node, node + 1] = 1
             adj[node + 1, node] = 1
 
@@ -44,31 +46,33 @@ def all_one_hop(num_patches, grid_size):
             adj[node, node - length] = 1
             adj[node - length, node] = 1
 
-        if node - length - 1 > 0:
-            adj[node, node - length - 1] = 1
-            adj[node - length - 1, node] = 1
+            if (node - length) % length - 1 >= 0:
+                adj[node, node - length - 1] = 1
+                adj[node - length - 1, node] = 1
 
-        if node - length + 1 > 0:
-            adj[node, node - length + 1] = 1
-            adj[node - length + 1, node] = 1
+            if (node - length) % length + 1 < length:
+                adj[node, node - length + 1] = 1
+                adj[node - length + 1, node] = 1
         
         if node + length < num_patches - 1:
             adj[node, node + length] = 1
             adj[node + length, node] = 1
 
-        if node + length - 1 < num_patches - 1:
-            adj[node, node + length - 1] = 1
-            adj[node + length - 1, node] = 1
-        
-        if node + length + 1 < num_patches - 1:
-            adj[node, node + length + 1] = 1
-            adj[node + length + 1, node] = 1
+            if (node + length) % length - 1 >= 0:
+                adj[node, node + length - 1] = 1
+                adj[node + length - 1, node] = 1
+            
+            if (node + length) % length + 1 < length:
+                adj[node, node + length + 1] = 1
+                adj[node + length + 1, node] = 1
 
-        if node - 1 > 0:
+        res = node % length
+
+        if res - 1 >= 0:
             adj[node, node - 1] = 1
             adj[node - 1, node] = 1
         
-        if node + 1 < num_patches - 1:
+        if res + 1 < length:
             adj[node, node + 1] = 1
             adj[node + 1, node] = 1
 
